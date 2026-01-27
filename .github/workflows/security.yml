@@ -13,6 +13,8 @@ jobs:
   gitguardian-scan:
     name: GitGuardian Secrets Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,6 +33,8 @@ jobs:
   dependency-audit:
     name: NPM Audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -86,6 +90,8 @@ jobs:
   env-file-check:
     name: Check for Committed Secrets
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
