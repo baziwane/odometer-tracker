@@ -30,6 +30,14 @@ yarn-error.log*
 # Vercel
 .vercel
 
+# Local IDE files
+/.claude/
+/.playwright-mcp/
+/.reports/
+/.session/
+/.swc/
+/coverage/
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts

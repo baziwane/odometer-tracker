@@ -1,0 +1,27 @@
+# Vercel Ignore File
+# Files and directories to exclude from Vercel deployments
+
+# Tests
+**/__tests__/**
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+jest.config.js
+jest.setup.js
+coverage/
+
+# Documentation
+*.md
+!README.md
+
+# Development files
+.env.local
+.env*.local
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+.DS_Store

@@ -11,11 +11,11 @@ export default function NewCarPage() {
   const router = useRouter();
   const { addCar, cars, updateSettings } = useAppState();
 
-  const handleSubmit = (data: CarFormData) => {
-    const newCar = addCar(data);
+  const handleSubmit = async (data: CarFormData) => {
+    const newCar = await addCar(data);
 
-    if (cars.length === 0) {
-      updateSettings({ defaultCarId: newCar.id });
+    if (cars.length === 0 && newCar) {
+      await updateSettings({ defaultCarId: newCar.id });
     }
 
     router.push('/cars');

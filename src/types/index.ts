@@ -6,6 +6,7 @@ export interface Car {
   year: number;
   color: string;
   createdAt: string;
+  updatedAt?: string;
   isActive: boolean;
   initialOdometer?: number;
   trackingStartDate?: string;
@@ -18,6 +19,7 @@ export interface OdometerReading {
   reading: number;
   notes?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface MonthlyMileage {

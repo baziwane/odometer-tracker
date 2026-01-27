@@ -1,6 +1,6 @@
 'use client';
 
-import { Stack, Title, Text } from '@mantine/core';
+import { Stack, Title } from '@mantine/core';
 import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { StatsOverview } from '@/components/dashboard/StatsOverview';
@@ -9,6 +9,7 @@ import { CarCard } from '@/components/cars/CarCard';
 import { CarSelector } from '@/components/cars/CarSelector';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { useAppState } from '@/hooks/useAppState';
 import { useStats } from '@/hooks/useStats';
 import { useRouter } from 'next/navigation';
@@ -16,7 +17,7 @@ import { IconCar } from '@tabler/icons-react';
 
 export default function Dashboard() {
   const router = useRouter();
-  const { cars, readings, isLoading } = useAppState();
+  const { cars, readings, isLoading, error } = useAppState();
   const {
     carsWithStats,
     totalYTDMileage,
@@ -31,6 +32,18 @@ export default function Dashboard() {
     return (
       <AppShell>
         <LoadingState />
+      </AppShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppShell>
+        <ErrorAlert
+          error={error}
+          title="Failed to load data"
+          onRetry={() => window.location.reload()}
+        />
       </AppShell>
     );
   }

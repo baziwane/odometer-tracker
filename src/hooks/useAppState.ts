@@ -1,160 +1,200 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
-import { useLocalStorage } from './useLocalStorage';
-import { STORAGE_KEY, CURRENT_VERSION } from '@/lib/constants';
-import { validateReadingInSequence } from '@/lib/calculations';
-import type { AppState, Car, OdometerReading, AppSettings } from '@/types';
+import { useCallback, useEffect, useState } from 'react';
+import { getCars, createCar as apiCreateCar, updateCar as apiUpdateCar, deleteCar as apiDeleteCar } from '@/lib/api/cars';
+import { getReadings, createReading as apiCreateReading, updateReading as apiUpdateReading, deleteReading as apiDeleteReading } from '@/lib/api/readings';
+import { getSettings, updateSettings as apiUpdateSettings } from '@/lib/api/settings';
+import { useAuth } from '@/contexts/AuthContext';
+import type { Car, OdometerReading, AppSettings } from '@/types';
 
-const initialState: AppState = {
-  cars: [],
-  readings: [],
-  settings: {
+export function useAppState() {
+  const { user } = useAuth();
+  const [cars, setCars] = useState<Car[]>([]);
+  const [readings, setReadings] = useState<OdometerReading[]>([]);
+  const [settings, setSettings] = useState<AppSettings>({
     defaultCarId: null,
     theme: 'auto',
     distanceUnit: 'miles',
-  },
-  version: CURRENT_VERSION,
-};
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export function useAppState() {
-  const { value: state, setValue: setState, isLoading } = useLocalStorage<AppState>(
-    STORAGE_KEY,
-    initialState
-  );
-
-  // Migration effect: Run migrations when version changes
+  // Load initial data when user is authenticated
   useEffect(() => {
-    if (!isLoading && state.version < CURRENT_VERSION) {
-      setState((prev) => {
-        // Migrate from version 1 to 2: Add baseline fields to Car interface
-        // The new optional fields (initialOdometer, trackingStartDate) default to undefined
-        // so no data transformation is needed, just version bump
-        if (prev.version === 1) {
-          return {
-            ...prev,
-            version: 2,
-          };
-        }
-
-        // Default: just update version
-        return {
-          ...prev,
-          version: CURRENT_VERSION,
-        };
+    if (!user) {
+      // If no user, reset state and loading
+      setCars([]);
+      setReadings([]);
+      setSettings({
+        defaultCarId: null,
+        theme: 'auto',
+        distanceUnit: 'miles',
       });
+      setIsLoading(false);
+      return;
     }
-  }, [isLoading, state.version, setState]);
+
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Load all data in parallel
+        const [carsData, readingsData, settingsData] = await Promise.all([
+          getCars(),
+          getReadings(),
+          getSettings(),
+        ]);
+
+        setCars(carsData);
+        setReadings(readingsData);
+        setSettings(settingsData);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load data';
+        setError(message);
+        console.error('Error loading data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user]);
 
   const addCar = useCallback(
-    (carData: Omit<Car, 'id' | 'createdAt' | 'isActive'>) => {
-      const newCar: Car = {
-        ...carData,
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        isActive: true,
-      };
-      setState((prev) => ({
-        ...prev,
-        cars: [...prev.cars, newCar],
-      }));
-      return newCar;
+    async (carData: Omit<Car, 'id' | 'createdAt' | 'isActive'>) => {
+      try {
+        setError(null);
+        const newCar = await apiCreateCar(carData);
+
+        // Update local state immutably
+        setCars((prev) => [...prev, newCar]);
+
+        return newCar;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to create car';
+        setError(message);
+        throw err;
+      }
     },
-    [setState]
+    []
   );
 
   const updateCar = useCallback(
-    (id: string, updates: Partial<Omit<Car, 'id' | 'createdAt'>>) => {
-      setState((prev) => ({
-        ...prev,
-        cars: prev.cars.map((car) =>
-          car.id === id ? { ...car, ...updates } : car
-        ),
-      }));
+    async (id: string, updates: Partial<Omit<Car, 'id' | 'createdAt'>>) => {
+      try {
+        setError(null);
+        const updatedCar = await apiUpdateCar(id, updates);
+
+        // Update local state immutably
+        setCars((prev) =>
+          prev.map((car) => (car.id === id ? updatedCar : car))
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to update car';
+        setError(message);
+        throw err;
+      }
     },
-    [setState]
+    []
   );
 
   const deleteCar = useCallback(
-    (id: string) => {
-      setState((prev) => ({
-        ...prev,
-        cars: prev.cars.map((car) =>
-          car.id === id ? { ...car, isActive: false } : car
-        ),
-      }));
+    async (id: string) => {
+      try {
+        setError(null);
+        await apiDeleteCar(id);
+
+        // Remove from local state immutably
+        setCars((prev) => prev.filter((car) => car.id !== id));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to delete car';
+        setError(message);
+        throw err;
+      }
     },
-    [setState]
+    []
   );
 
   const addReading = useCallback(
-    (readingData: Omit<OdometerReading, 'id' | 'createdAt'>) => {
-      // Validate the reading fits in chronological sequence
-      const validation = validateReadingInSequence(
-        state.readings,
-        readingData.carId,
-        readingData.date,
-        readingData.reading
-      );
+    async (readingData: Omit<OdometerReading, 'id' | 'createdAt'>) => {
+      try {
+        setError(null);
+        // Server-side validation via PostgreSQL trigger
+        const newReading = await apiCreateReading(readingData);
 
-      if (!validation.isValid) {
-        throw new Error(validation.error);
+        // Update local state immutably
+        setReadings((prev) => [...prev, newReading]);
+
+        return newReading;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to create reading';
+        setError(message);
+        throw err;
       }
-
-      const newReading: OdometerReading = {
-        ...readingData,
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-      };
-      setState((prev) => ({
-        ...prev,
-        readings: [...prev.readings, newReading],
-      }));
-      return newReading;
     },
-    [setState, state.readings]
+    []
   );
 
   const updateReading = useCallback(
-    (id: string, updates: Partial<Omit<OdometerReading, 'id' | 'createdAt'>>) => {
-      setState((prev) => ({
-        ...prev,
-        readings: prev.readings.map((reading) =>
-          reading.id === id ? { ...reading, ...updates } : reading
-        ),
-      }));
+    async (id: string, updates: Partial<Omit<OdometerReading, 'id' | 'createdAt' | 'carId'>>) => {
+      try {
+        setError(null);
+        const updatedReading = await apiUpdateReading(id, updates);
+
+        // Update local state immutably
+        setReadings((prev) =>
+          prev.map((reading) => (reading.id === id ? updatedReading : reading))
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to update reading';
+        setError(message);
+        throw err;
+      }
     },
-    [setState]
+    []
   );
 
   const deleteReading = useCallback(
-    (id: string) => {
-      setState((prev) => ({
-        ...prev,
-        readings: prev.readings.filter((reading) => reading.id !== id),
-      }));
+    async (id: string) => {
+      try {
+        setError(null);
+        await apiDeleteReading(id);
+
+        // Update local state immutably
+        setReadings((prev) => prev.filter((reading) => reading.id !== id));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to delete reading';
+        setError(message);
+        throw err;
+      }
     },
-    [setState]
+    []
   );
 
   const updateSettings = useCallback(
-    (updates: Partial<AppSettings>) => {
-      setState((prev) => ({
-        ...prev,
-        settings: { ...prev.settings, ...updates },
-      }));
+    async (updates: Partial<AppSettings>) => {
+      try {
+        setError(null);
+        const updatedSettings = await apiUpdateSettings(updates);
+
+        // Update local state immutably
+        setSettings(updatedSettings);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to update settings';
+        setError(message);
+        throw err;
+      }
     },
-    [setState]
+    []
   );
 
-  const activeCars = state.cars.filter((car) => car.isActive);
-
   return {
-    state,
     isLoading,
-    cars: activeCars,
-    readings: state.readings,
-    settings: state.settings,
+    error,
+    cars,
+    readings,
+    settings,
     addCar,
     updateCar,
     deleteCar,
