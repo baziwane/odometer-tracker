@@ -1,0 +1,115 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  gitguardian-scan:
+    name: GitGuardian Secrets Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for comprehensive scan
+
+      - name: GitGuardian Scan
+        uses: GitGuardian/ggshield-action@v1
+        env:
+          GITHUB_PUSH_BEFORE_SHA: ${{ github.event.before }}
+          GITHUB_PUSH_BASE_SHA: ${{ github.event.base }}
+          GITHUB_PULL_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
+
+  dependency-audit:
+    name: NPM Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true  # Don't fail build, but report issues
+
+      - name: Check for high/critical vulnerabilities
+        run: |
+          AUDIT_RESULT=$(npm audit --audit-level=high --json)
+          HIGH_VULN=$(echo $AUDIT_RESULT | jq '.metadata.vulnerabilities.high // 0')
+          CRITICAL_VULN=$(echo $AUDIT_RESULT | jq '.metadata.vulnerabilities.critical // 0')
+          
+          if [ "$HIGH_VULN" -gt 0 ] || [ "$CRITICAL_VULN" -gt 0 ]; then
+            echo "::error::Found $HIGH_VULN high and $CRITICAL_VULN critical vulnerabilities"
+            npm audit
+            exit 1
+          fi
+
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript, typescript
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  env-file-check:
+    name: Check for Committed Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for .env files
+        run: |
+          if find . -name ".env" -not -path "./node_modules/*" -not -path "./.git/*" | grep -q .; then
+            echo "::error::Found .env file(s) in repository!"
+            find . -name ".env" -not -path "./node_modules/*" -not -path "./.git/*"
+            exit 1
+          fi
+
+      - name: Check for .env.local files
+        run: |
+          if find . -name ".env.local" -not -path "./node_modules/*" -not -path "./.git/*" | grep -q .; then
+            echo "::error::Found .env.local file(s) in repository!"
+            find . -name ".env.local" -not -path "./node_modules/*" -not -path "./.git/*"
+            exit 1
+          fi
+
+      - name: Check for private keys
+        run: |
+          if find . -name "*.pem" -o -name "*.key" -not -path "./node_modules/*" -not -path "./.git/*" | grep -q .; then
+            echo "::error::Found private key file(s) in repository!"
+            find . \( -name "*.pem" -o -name "*.key" \) -not -path "./node_modules/*" -not -path "./.git/*"
+            exit 1
+          fi

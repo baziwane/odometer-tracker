@@ -1,0 +1,67 @@
+# Pre-commit hooks configuration
+# See https://pre-commit.com for more information
+# Installation: pip install pre-commit && pre-commit install
+
+repos:
+  # GitGuardian - Secrets detection
+  - repo: https://github.com/gitguardian/ggshield
+    rev: v1.25.0
+    hooks:
+      - id: ggshield
+        language_version: python3
+        stages: [commit]
+        args: ['secret', 'scan', 'pre-commit']
+
+  # General pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Prevent committing large files
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      
+      # Check for files that would conflict in case-insensitive filesystems
+      - id: check-case-conflict
+      
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+      
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      
+      # Check for merge conflicts
+      - id: check-merge-conflict
+      
+      # Check JSON syntax
+      - id: check-json
+      
+      # Check YAML syntax
+      - id: check-yaml
+        args: ['--unsafe']  # Allow custom YAML tags
+      
+      # Detect private keys
+      - id: detect-private-key
+      
+      # Prevent committing to main/master directly
+      - id: no-commit-to-branch
+        args: ['--branch', 'main', '--branch', 'master']
+
+  # TypeScript/JavaScript linting (optional)
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.0.0-beta.2
+    hooks:
+      - id: eslint
+        files: \.(js|jsx|ts|tsx)$
+        types: [file]
+        additional_dependencies:
+          - eslint@9.39.2
+          - eslint-config-next@16.1.4
+
+# Configuration
+default_language_version:
+  python: python3
+  node: 18.0.0
+
+# Additional settings
+fail_fast: false  # Run all hooks even if one fails
