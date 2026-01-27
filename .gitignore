@@ -48,7 +48,11 @@ bin/
 obj/
 *.log
 launchSettings.json
-
+apphost.cs
+apphost.json
+/.playwright-mcp/
+/scripts/
+/.claude/
 # IDE
 .vscode/
 .idea/
