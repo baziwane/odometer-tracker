@@ -1,0 +1,41 @@
+# GitGuardian Configuration
+# https://docs.gitguardian.com/ggshield-docs/reference/configuration
+
+version: 2
+
+# Paths to ignore when scanning
+paths-ignore:
+  - "**/.git/**"
+  - "**/node_modules/**"
+  - "**/.next/**"
+  - "**/build/**"
+  - "**/dist/**"
+  - "**/coverage/**"
+  - "**/*.lock"
+  - "**/*.log"
+  - "**/package-lock.json"
+
+# Specific files to ignore
+ignored-paths:
+  - ".env.example"  # Template file with placeholders only
+  - "SECURITY.md"   # Contains example secrets for documentation
+
+# Ignore test files with fake credentials
+ignored-matches:
+  - name: test-credentials
+    match: "test-secret|dummy-key|example-key|your-.*-key-here|your-project-id"
+
+# Configure secret detection
+secret:
+  # Show secrets found in policies
+  show_secrets: false
+  
+  # Ignore specific detectors (if needed)
+  ignored_detectors: []
+
+# Output settings
+verbose: false
+output: "json"
+
+# Exit codes
+exit_zero: false  # Exit with non-zero code if secrets found

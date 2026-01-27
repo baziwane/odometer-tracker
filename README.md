@@ -75,6 +75,8 @@ A modern, mobile-first Progressive Web App for tracking vehicle odometer reading
 - **[Deployment Guide](DEPLOYMENT.md)**: How to deploy to production
 - **[Testing Guide](TESTING.md)**: How to write and run tests
 - **[Database Setup](supabase/README.md)**: Database schema and migration instructions
+- **[Security Policy](SECURITY.md)**: Security best practices and incident response
+- **[Security Setup](SECURITY_SETUP.md)**: Security tools installation and configuration
 
 ## Project Structure
 
@@ -195,6 +197,21 @@ The easiest way to deploy is with Vercel:
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/odometer-tracker)
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
+
+## Security
+
+This project implements multiple layers of security:
+
+- 🔐 **Secrets Management**: Environment variables for sensitive data
+- 🛡️ **GitGuardian Integration**: Automated secrets scanning
+- 🔍 **Pre-commit Hooks**: Prevent accidental secret commits
+- 🚨 **CI/CD Security Scanning**: Continuous security monitoring
+- 📋 **Security Headers**: CSP, HSTS, X-Frame-Options, etc.
+- 🔑 **Supabase RLS**: Row-level security for data protection
+- 🚦 **Rate Limiting**: Protection against abuse
+- 🛑 **CSRF Protection**: Cross-site request forgery prevention
+
+**Important**: Never commit API keys or secrets to Git. See [SECURITY.md](SECURITY.md) for security policy and [SECURITY_SETUP.md](SECURITY_SETUP.md) for setup instructions.
 
 ## License
 
