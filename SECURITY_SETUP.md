@@ -107,7 +107,7 @@ git check-ignore .env.local
 # Should output: .env.local
 
 # Verify no secrets in repo
-grep -r "fc-" --exclude-dir=node_modules --exclude-dir=.git .
+grep -r "api-key-pattern" --exclude-dir=node_modules --exclude-dir=.git .
 # Should return nothing
 
 # Check for committed .env files
@@ -169,7 +169,7 @@ find . -name ".env" -not -path "./node_modules/*" -not -path "./.git/*"
 
 2. **Add to `.env.local`** with real value:
    ```env
-   NEW_API_KEY=fc-real-key-value-123456
+   NEW_API_KEY=your-real-api-key-value-here
    ```
 
 3. **Use in code:**
@@ -227,7 +227,7 @@ git push origin --force --all
 # Download BFG from https://rtyley.github.io/bfg-repo-cleaner/
 
 # Create file with secrets to replace
-echo "fc-exposed-key-123456" > secrets.txt
+echo "exposed-api-key-123456" > secrets.txt
 
 # Clean repository
 java -jar bfg.jar --replace-text secrets.txt

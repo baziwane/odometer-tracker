@@ -58,7 +58,7 @@ Store sensitive credentials in environment variables:
 
 ```bash
 # .env.local (NEVER commit this file)
-FIRECRAWL_API_KEY=fc-your-actual-key-here
+FIRECRAWL_API_KEY=your-actual-firecrawl-api-key-here
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 

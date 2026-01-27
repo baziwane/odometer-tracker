@@ -49,8 +49,7 @@ jobs:
         run: npm ci
 
       - name: Run npm audit
-        run: npm audit --audit-level=moderate
-        continue-on-error: true  # Don't fail build, but report issues
+        run: npm audit --audit-level=high
 
       - name: Check for high/critical vulnerabilities
         run: |
